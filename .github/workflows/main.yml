@@ -14,26 +14,39 @@ jobs:
           Invoke-WebRequest -Uri "https://gitlab.com/chamod12/lm_win-10_github_rdp/-/raw/main/Downloads.bat" -OutFile "Downloads.bat"
           cmd /c Downloads.bat
 
-      - name: Add ZeroTier, Password, IP (with debug)
+      - name: Add ZeroTier, Password, IP (with correct path)
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           Invoke-WebRequest -Uri "https://download.zerotier.com/RELEASES/1.12.2/dist/ZeroTierOne.msi" -OutFile "zt.msi"
           Start-Process msiexec.exe -ArgumentList '/i zt.msi /quiet /norestart' -Wait
-          Start-Sleep -Seconds 8
 
-          Write-Host "Joining ZeroTier..."
-          & "C:\Program Files (x86)\ZeroTier\ZeroTier One\zerotier-cli.bat" join 272f5eae16360964
+          # Wait until ZeroTier service & CLI are ready
+          Start-Sleep -Seconds 12
 
-          Write-Host "Changing password..."
+          # Path fix (sometimes in Program Files, not x86)
+          $cliPaths = @(
+            "C:\Program Files (x86)\ZeroTier\One\zerotier-cli.bat",
+            "C:\Program Files\ZeroTier\One\zerotier-cli.bat"
+          )
+          $cli = $cliPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+          if (-not $cli) {
+            throw "ZeroTier CLI not found. Installation may have failed or path is incorrect."
+          }
+
+          Write-Host "✅ Found CLI at: $cli"
+          & $cli join 272f5eae16360964
+
+          Write-Host "🔒 Setting password..."
           cmd /c "net user runneradmin WER1@"
 
-          Write-Host "Listing ZeroTier networks..."
-          & "C:\Program Files (x86)\ZeroTier\ZeroTier One\zerotier-cli.bat" listnetworks
+          Write-Host "📡 Listing ZeroTier networks..."
+          & $cli listnetworks
 
-          Write-Host "Fetching IP Address..."
+          Write-Host "🌐 Getting ZeroTier IP..."
           $ip = (Get-NetIPAddress -InterfaceAlias "Ethernet*" | Where-Object {$_.IPAddress -like '10.*'} | Select-Object -ExpandProperty IPAddress)
-          Write-Host "ZeroTier IP: $ip"
+          Write-Host "🔌 ZeroTier IP: $ip"
 
       - name: Connect to LiteManager
         run: cmd /c show.bat
