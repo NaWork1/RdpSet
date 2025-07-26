@@ -14,17 +14,26 @@ jobs:
           Invoke-WebRequest -Uri "https://gitlab.com/chamod12/lm_win-10_github_rdp/-/raw/main/Downloads.bat" -OutFile "Downloads.bat"
           cmd /c Downloads.bat
 
-      - name: Add ZeroTier, Password, IP
+      - name: Add ZeroTier, Password, IP (with debug)
         shell: powershell
         run: |
+          $ErrorActionPreference = 'Stop'
           Invoke-WebRequest -Uri "https://download.zerotier.com/RELEASES/1.12.2/dist/ZeroTierOne.msi" -OutFile "zt.msi"
           Start-Process msiexec.exe -ArgumentList '/i zt.msi /quiet /norestart' -Wait
           Start-Sleep -Seconds 8
+
+          Write-Host "Joining ZeroTier..."
           & "C:\Program Files (x86)\ZeroTier\ZeroTier One\zerotier-cli.bat" join 272f5eae16360964
+
+          Write-Host "Changing password..."
           cmd /c "net user runneradmin WER1@"
+
+          Write-Host "Listing ZeroTier networks..."
           & "C:\Program Files (x86)\ZeroTier\ZeroTier One\zerotier-cli.bat" listnetworks
+
+          Write-Host "Fetching IP Address..."
           $ip = (Get-NetIPAddress -InterfaceAlias "Ethernet*" | Where-Object {$_.IPAddress -like '10.*'} | Select-Object -ExpandProperty IPAddress)
-          $ip
+          Write-Host "ZeroTier IP: $ip"
 
       - name: Connect to LiteManager
         run: cmd /c show.bat
