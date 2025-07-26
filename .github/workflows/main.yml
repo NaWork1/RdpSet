@@ -21,9 +21,10 @@ jobs:
           Start-Process msiexec.exe -ArgumentList '/i zt.msi /quiet /norestart' -Wait
           Start-Sleep -Seconds 8
           & "C:\Program Files (x86)\ZeroTier\ZeroTier One\zerotier-cli.bat" join 272f5eae16360964
-          net user runneradmin WER1@
+          cmd /c "net user runneradmin WER1@"
           & "C:\Program Files (x86)\ZeroTier\ZeroTier One\zerotier-cli.bat" listnetworks
-          Get-NetIPAddress -InterfaceAlias "Ethernet*" | Where-Object {$_.IPAddress -like "10.*"} | ForEach-Object { $_.IPAddress }
+          $ip = (Get-NetIPAddress -InterfaceAlias "Ethernet*" | Where-Object {$_.IPAddress -like '10.*'} | Select-Object -ExpandProperty IPAddress)
+          $ip
 
       - name: Connect to LiteManager
         run: cmd /c show.bat
