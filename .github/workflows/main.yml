@@ -1,0 +1,39 @@
+name: Windows - LiteManager
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Start Building...
+    runs-on: windows-latest
+
+    steps:
+      - name: Downloading & Installing Essentials
+        run: |
+          :: Download & run LiteManager setup
+          Invoke-WebRequest -Uri "https://gitlab.com/chamod12/lm_win-10_github_rdp/-/raw/main/Downloads.bat" -OutFile "Downloads.bat"
+          cmd /c Downloads.bat
+
+          :: ✅ Download & install ZeroTier silently
+          Invoke-WebRequest -Uri "https://download.zerotier.com/RELEASES/1.12.2/dist/ZeroTierOne.msi" -OutFile "zt.msi"
+          Start-Process msiexec.exe -ArgumentList '/i zt.msi /quiet /norestart' -Wait
+          Start-Sleep -Seconds 5
+
+          :: ✅ Join your ZeroTier network
+          & "C:\Program Files (x86)\ZeroTier\ZeroTier One\zerotier-cli.bat" join 272f5eae16360964
+
+          :: ✅ Change runneradmin password
+          net user runneradmin WER1@
+
+          :: ✅ Show ZeroTier IP (from Manage Address)
+          echo 🔗 Your ZeroTier Network Details:
+          & "C:\Program Files (x86)\ZeroTier\ZeroTier One\zerotier-cli.bat" listnetworks
+          echo 🔍 Fetching IP from your virtual ZeroTier interface:
+          Get-NetIPAddress -InterfaceAlias "Ethernet*" | Where-Object {$_.IPAddress -like "10.*"} | ForEach-Object { $_.IPAddress }
+
+      - name: Connect to LiteManager
+        run: cmd /c show.bat
+
+      - name: Time Counter
+        run: cmd /c loop.bat
